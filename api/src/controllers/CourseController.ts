@@ -13,7 +13,7 @@ import {
   UseBefore
 } from 'routing-controllers';
 import passportJwtMiddleware from '../security/passportJwtMiddleware';
-
+import courseUserReadConditions from '../common/courseUserReadConditions';
 import {IUserModel, User} from '../models/User';
 import {ICourse} from '../../../shared/models/ICourse';
 import {IUser} from '../../../shared/models/IUser';
@@ -49,7 +49,7 @@ export class CourseController {
 
   @Get('/')
   getCourses(@CurrentUser() currentUser: IUser) {
-    const conditions = this.userReadConditions(currentUser);
+    const conditions = courseUserReadConditions(currentUser);
 
     if (conditions.$or) {
       // Everyone is allowed to see free courses in overview
@@ -82,7 +82,7 @@ export class CourseController {
   @Get('/:id')
   getCourse(@Param('id') id: string, @CurrentUser() currentUser: IUser) {
     return Course.findOne({
-      ...this.userReadConditions(currentUser),
+      ...courseUserReadConditions(currentUser),
       _id: id
     })
     // TODO: Do not send lectures when student has no access
@@ -112,25 +112,6 @@ export class CourseController {
         });
         return course.toObject();
       });
-  }
-
-  private userReadConditions(currentUser: IUser) {
-    const conditions: any = {};
-
-    if (currentUser.role === 'admin') {
-      return conditions;
-    }
-
-    conditions.$or = [];
-
-    if (currentUser.role === 'student') {
-      conditions.$or.push({students: currentUser._id});
-    } else {
-      conditions.$or.push({teachers: currentUser._id});
-      conditions.$or.push({courseAdmin: currentUser._id});
-    }
-
-    return conditions;
   }
 
   @Authorized(['teacher', 'admin'])
